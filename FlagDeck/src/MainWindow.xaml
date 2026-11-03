@@ -1,0 +1,231 @@
+<Window x:Class="FlagDeck.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="FlagDeck" Width="1140" Height="720" MinWidth="900" MinHeight="540"
+        Background="{DynamicResource Bg}" Foreground="{DynamicResource Text}"
+        FontFamily="Segoe UI Variable Text, Segoe UI" FontSize="13"
+        WindowStartupLocation="CenterScreen" UseLayoutRounding="True">
+  <Grid>
+    <Grid.ColumnDefinitions>
+      <ColumnDefinition Width="190"/>
+      <ColumnDefinition Width="*"/>
+    </Grid.ColumnDefinitions>
+
+    <!-- Sidebar -->
+    <Border Background="{DynamicResource Surface}" Padding="12,18">
+      <DockPanel LastChildFill="False">
+        <StackPanel DockPanel.Dock="Top">
+          <TextBlock Text="FlagDeck" FontSize="21" FontWeight="Bold" Margin="10,0,0,2"/>
+          <TextBlock Text="FastFlag manager" Style="{StaticResource Dim}" Margin="10,0,0,20"/>
+          <RadioButton x:Name="NavFlags" Content="Flags &amp; presets" Tag="Flags" IsChecked="True" GroupName="nav" Style="{StaticResource NavButton}" Checked="Nav_Checked"/>
+          <RadioButton Content="Hotkeys" Tag="Hotkeys" GroupName="nav" Style="{StaticResource NavButton}" Checked="Nav_Checked"/>
+          <RadioButton Content="Settings" Tag="Settings" GroupName="nav" Style="{StaticResource NavButton}" Checked="Nav_Checked"/>
+        </StackPanel>
+        <TextBlock x:Name="TargetsText" DockPanel.Dock="Bottom" Style="{StaticResource Dim}" TextWrapping="Wrap" Margin="10,0"/>
+      </DockPanel>
+    </Border>
+
+    <Grid Grid.Column="1" Margin="18,16,18,12">
+      <Grid.RowDefinitions>
+        <RowDefinition Height="*"/>
+        <RowDefinition Height="Auto"/>
+      </Grid.RowDefinitions>
+
+      <!-- ============ FLAGS & PRESETS ============ -->
+      <Grid x:Name="ViewFlags">
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="270"/>
+          <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <Border Background="{DynamicResource Surface}" CornerRadius="10" Padding="12" Margin="0,0,12,0">
+          <DockPanel>
+            <TextBlock DockPanel.Dock="Top" Text="PRESETS" Style="{StaticResource Dim}" FontWeight="SemiBold" Margin="2,0,0,8"/>
+            <TextBox DockPanel.Dock="Top" Margin="0,0,0,8" ToolTip="Rename selected preset"
+                     Text="{Binding SelectedItem.Name, ElementName=PresetList, UpdateSourceTrigger=PropertyChanged}"/>
+            <WrapPanel DockPanel.Dock="Bottom" Margin="0,8,0,0">
+              <Button Content="+ New" Click="NewPreset_Click"/>
+              <Button Content="Copy" Click="DupPreset_Click"/>
+              <Button Content="▲" ToolTip="Move up (earlier presets lose to later ones)" Click="MoveUp_Click"/>
+              <Button Content="▼" ToolTip="Move down" Click="MoveDown_Click"/>
+              <Button Content="Merge" ToolTip="Ctrl+click several presets, then merge" Click="Merge_Click"/>
+              <Button Content="Share" ToolTip="Copy a share code to the clipboard" Click="Share_Click"/>
+              <Button Content="Import" ToolTip="Import from clipboard (share code or JSON) or a file" Click="Import_Click"/>
+              <Button Content="Delete" Click="DeletePreset_Click"/>
+            </WrapPanel>
+            <ListBox x:Name="PresetList" SelectionMode="Extended" SelectionChanged="PresetList_SelectionChanged">
+              <ListBox.ItemTemplate>
+                <DataTemplate>
+                  <DockPanel>
+                    <CheckBox DockPanel.Dock="Left" Margin="0,0,10,0" IsChecked="{Binding Enabled, Mode=TwoWay}"/>
+                    <TextBlock DockPanel.Dock="Right" Text="{Binding Count}" Style="{StaticResource Dim}" VerticalAlignment="Center"/>
+                    <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
+                  </DockPanel>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+          </DockPanel>
+        </Border>
+
+        <Border Grid.Column="1" Background="{DynamicResource Surface}" CornerRadius="10" Padding="12">
+          <DockPanel>
+            <Grid DockPanel.Dock="Top" Margin="0,0,0,8">
+              <TextBox x:Name="SearchBox" FontSize="14" TextChanged="Search_Changed"/>
+              <TextBlock x:Name="SearchHint" Text="Search flags…  (every word must match)" Style="{StaticResource Dim}" Margin="11,0,0,0" VerticalAlignment="Center" IsHitTestVisible="False"/>
+            </Grid>
+            <DockPanel DockPanel.Dock="Top" Margin="0,0,0,8">
+              <StackPanel DockPanel.Dock="Left" Orientation="Horizontal">
+                <RadioButton Content="All" Tag="All" IsChecked="True" GroupName="ty" Style="{StaticResource SegButton}" Checked="Type_Checked"/>
+                <RadioButton Content="Flag" Tag="Flag" GroupName="ty" Style="{StaticResource SegButton}" Checked="Type_Checked"/>
+                <RadioButton Content="Int" Tag="Int" GroupName="ty" Style="{StaticResource SegButton}" Checked="Type_Checked"/>
+                <RadioButton Content="String" Tag="String" GroupName="ty" Style="{StaticResource SegButton}" Checked="Type_Checked"/>
+                <RadioButton Content="Log" Tag="Log" GroupName="ty" Style="{StaticResource SegButton}" Checked="Type_Checked"/>
+              </StackPanel>
+              <CheckBox x:Name="EditedOnly" DockPanel.Dock="Right" Content="Edited only" Margin="0" VerticalAlignment="Center"
+                        Checked="Filter_Changed" Unchecked="Filter_Changed"/>
+              <TextBlock x:Name="CountText" Style="{StaticResource Dim}" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0,0,16,0"/>
+            </DockPanel>
+            <DockPanel DockPanel.Dock="Bottom" Margin="0,8,0,0">
+              <Button DockPanel.Dock="Right" Content="Add custom flag" Margin="8,0,0,0" Click="AddCustom_Click"/>
+              <TextBox x:Name="CustomBox" ToolTip="e.g. DFIntTaskSchedulerTargetFps=240" KeyDown="CustomBox_KeyDown"/>
+            </DockPanel>
+            <DataGrid x:Name="FlagGrid" AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False"
+                      CanUserResizeRows="False" HeadersVisibility="Column" GridLinesVisibility="None" SelectionMode="Single"
+                      Background="Transparent" BorderThickness="0" RowHeight="36" Foreground="{DynamicResource Text}"
+                      RowStyle="{StaticResource FlagRowStyle}" CellStyle="{StaticResource FlagCell}"
+                      ColumnHeaderStyle="{StaticResource FlagHeader}"
+                      EnableRowVirtualization="True" VirtualizingPanel.VirtualizationMode="Recycling"
+                      HorizontalScrollBarVisibility="Disabled">
+              <DataGrid.Columns>
+                <DataGridTemplateColumn Header="On" Width="52">
+                  <DataGridTemplateColumn.CellTemplate>
+                    <DataTemplate>
+                      <CheckBox IsChecked="{Binding Enabled, UpdateSourceTrigger=PropertyChanged}" Margin="0" HorizontalAlignment="Center"/>
+                    </DataTemplate>
+                  </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+                <DataGridTextColumn Header="Flag" Binding="{Binding Name}" IsReadOnly="True" Width="*" MinWidth="220"/>
+                <DataGridTextColumn Header="Type" Binding="{Binding Type}" IsReadOnly="True" Width="64"/>
+                <DataGridTextColumn Header="Default" Binding="{Binding Default}" IsReadOnly="True" Width="130"/>
+                <DataGridTemplateColumn Header="Value" Width="170">
+                  <DataGridTemplateColumn.CellTemplate>
+                    <DataTemplate>
+                      <TextBox Style="{StaticResource CellInput}" Text="{Binding Value, UpdateSourceTrigger=LostFocus}" KeyDown="Cell_KeyDown"/>
+                    </DataTemplate>
+                  </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+              </DataGrid.Columns>
+            </DataGrid>
+          </DockPanel>
+        </Border>
+      </Grid>
+
+      <!-- ============ HOTKEYS ============ -->
+      <Grid x:Name="ViewHotkeys" Visibility="Collapsed">
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="*"/>
+          <ColumnDefinition Width="12"/>
+          <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+        <Border Background="{DynamicResource Surface}" CornerRadius="10" Padding="16">
+          <DockPanel>
+            <TextBlock DockPanel.Dock="Top" Text="NEW HOTKEY" Style="{StaticResource Dim}" FontWeight="SemiBold" Margin="0,0,0,10"/>
+            <TextBlock DockPanel.Dock="Top" Text="Press the shortcut" Style="{StaticResource Dim}" Margin="0,0,0,4"/>
+            <TextBox DockPanel.Dock="Top" x:Name="HkGesture" IsReadOnly="True" PreviewKeyDown="HkGesture_PreviewKeyDown" Margin="0,0,0,12"
+                     ToolTip="Click here and press a key combo. Esc clears."/>
+            <StackPanel DockPanel.Dock="Top" Margin="0,0,0,12">
+              <RadioButton x:Name="HkToggle" Content="Toggle a preset on/off  (select one)" IsChecked="True" GroupName="hk" Foreground="{DynamicResource Text}" Margin="0,0,0,6"/>
+              <RadioButton x:Name="HkCycle" Content="Cycle presets  (select two or more, in order)" GroupName="hk" Foreground="{DynamicResource Text}" Margin="0,0,0,6"/>
+              <RadioButton x:Name="HkFlag" Content="Toggle / cycle a single flag" GroupName="hk" Foreground="{DynamicResource Text}"/>
+            </StackPanel>
+            <TextBox DockPanel.Dock="Top" x:Name="HkFlagText" Margin="0,0,0,4" ToolTip="FlagName=Value  or  FlagName=60|144|240"/>
+            <TextBlock DockPanel.Dock="Top" Text="Flag format:  Name=Value   or   Name=60|144|240  (cycles, then off)" Style="{StaticResource Dim}" Margin="0,0,0,12"/>
+            <Button DockPanel.Dock="Bottom" Style="{StaticResource AccentButton}" Content="Add hotkey" Click="AddHotkey_Click" HorizontalAlignment="Left"/>
+            <ListBox x:Name="HkPresets" SelectionMode="Extended" Margin="0,0,0,10">
+              <ListBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding Name}"/></DataTemplate></ListBox.ItemTemplate>
+            </ListBox>
+          </DockPanel>
+        </Border>
+        <Border Grid.Column="2" Background="{DynamicResource Surface}" CornerRadius="10" Padding="16">
+          <DockPanel>
+            <TextBlock DockPanel.Dock="Top" Text="YOUR HOTKEYS" Style="{StaticResource Dim}" FontWeight="SemiBold" Margin="0,0,0,6"/>
+            <TextBlock DockPanel.Dock="Top" TextWrapping="Wrap" Style="{StaticResource Dim}" Margin="0,0,0,10"
+                       Text="Hotkeys work while FlagDeck runs in the tray, even inside Roblox. Roblox reads flags at launch, so a change takes effect the next time Roblox starts."/>
+            <ListBox x:Name="HkList">
+              <ListBox.ItemTemplate>
+                <DataTemplate>
+                  <DockPanel>
+                    <Button DockPanel.Dock="Right" Content="✕" Margin="8,0,0,0" Click="RemoveHotkey_Click"/>
+                    <StackPanel>
+                      <TextBlock Text="{Binding Gesture}" FontWeight="SemiBold"/>
+                      <TextBlock Text="{Binding Summary}" Style="{StaticResource Dim}" TextTrimming="CharacterEllipsis"/>
+                    </StackPanel>
+                  </DockPanel>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+          </DockPanel>
+        </Border>
+      </Grid>
+
+      <!-- ============ SETTINGS ============ -->
+      <ScrollViewer x:Name="ViewSettings" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
+        <StackPanel MaxWidth="720" HorizontalAlignment="Left">
+          <Border Background="{DynamicResource Surface}" CornerRadius="10" Padding="16" Margin="0,0,0,12">
+            <StackPanel>
+              <TextBlock Text="THEME" Style="{StaticResource Dim}" FontWeight="SemiBold" Margin="0,0,0,10"/>
+              <StackPanel Orientation="Horizontal">
+                <Button Content="Dark" Tag="Dark" Click="Theme_Click"/>
+                <Button Content="Light" Tag="Light" Click="Theme_Click"/>
+                <Button Content="Midnight" Tag="Midnight" Click="Theme_Click"/>
+                <Button Content="Ember" Tag="Ember" Click="Theme_Click"/>
+              </StackPanel>
+            </StackPanel>
+          </Border>
+          <Border Background="{DynamicResource Surface}" CornerRadius="10" Padding="16" Margin="0,0,0,12">
+            <StackPanel>
+              <TextBlock Text="BEHAVIOR" Style="{StaticResource Dim}" FontWeight="SemiBold" Margin="0,0,0,10"/>
+              <CheckBox x:Name="OptAutoApply" Tag="AutoApply" Content="Apply automatically after every change" Click="Opt_Click"/>
+              <CheckBox x:Name="OptKeep" Tag="KeepApplied" Content="Keep flags applied (re-write them if Roblox or your bootstrapper wipes them)" Click="Opt_Click"/>
+              <CheckBox x:Name="OptHotkeys" Tag="HotkeysEnabled" Content="Enable global hotkeys" Click="Opt_Click"/>
+              <CheckBox x:Name="OptTray" Tag="CloseToTray" Content="Closing the window keeps FlagDeck running in the tray" Click="Opt_Click"/>
+              <CheckBox x:Name="OptStartup" Tag="StartWithWindows" Content="Start with Windows (minimized)" Click="Opt_Click"/>
+            </StackPanel>
+          </Border>
+          <Border Background="{DynamicResource Surface}" CornerRadius="10" Padding="16" Margin="0,0,0,12">
+            <StackPanel>
+              <TextBlock Text="UPDATES" Style="{StaticResource Dim}" FontWeight="SemiBold" Margin="0,0,0,10"/>
+              <CheckBox x:Name="OptAutoFlags" Tag="AutoUpdateFlags" Content="Refresh the Roblox flag list automatically on launch" Click="Opt_Click"/>
+              <CheckBox x:Name="OptAutoApp" Tag="AutoUpdateApp" Content="Install FlagDeck updates automatically" Click="Opt_Click"/>
+              <WrapPanel>
+                <Button Content="Update flag list now" Click="UpdateFlags_Click"/>
+                <Button Content="Check for FlagDeck update" Click="CheckApp_Click"/>
+                <Button x:Name="InstallBtn" Style="{StaticResource AccentButton}" Content="Install update" Visibility="Collapsed" Click="InstallUpdate_Click" Margin="0,0,6,6"/>
+              </WrapPanel>
+              <TextBlock x:Name="VersionText" Style="{StaticResource Dim}"/>
+            </StackPanel>
+          </Border>
+          <Border Background="{DynamicResource Surface}" CornerRadius="10" Padding="16">
+            <StackPanel>
+              <TextBlock Text="TARGETS  (where flags get written)" Style="{StaticResource Dim}" FontWeight="SemiBold" Margin="0,0,0,10"/>
+              <ItemsControl x:Name="TargetList">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <CheckBox IsChecked="{Binding Selected, Mode=TwoWay}" Content="{Binding Name}" ToolTip="{Binding Dir}"/>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+              <Button Content="Rescan" Click="Rescan_Click" HorizontalAlignment="Left"/>
+            </StackPanel>
+          </Border>
+        </StackPanel>
+      </ScrollViewer>
+
+      <!-- Status bar -->
+      <DockPanel Grid.Row="1" Margin="0,12,0,0">
+        <Button DockPanel.Dock="Right" Style="{StaticResource AccentButton}" Content="Apply now" Click="ApplyNow_Click" Margin="12,0,0,0"/>
+        <TextBlock x:Name="StatusText" Style="{StaticResource Dim}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+      </DockPanel>
+    </Grid>
+  </Grid>
+</Window>
